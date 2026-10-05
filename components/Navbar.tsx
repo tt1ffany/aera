@@ -1,6 +1,10 @@
 import { Box } from "lucide-react";
+import Button from "./ui/Button";
 
 const Navbar = () => {
+  const isSignedIn = false;
+  const username = "tiffany";
+
   const handleLogin = async () => {};
 
   return (
@@ -21,12 +25,26 @@ const Navbar = () => {
         </div>
 
         <div className="actions">
-          <button onClick={handleLogin} className="login">
-            Log in
-          </button>
-          <a href="#upload" className="cta">
-            Get Started
-          </a>
+          {isSignedIn ? (
+            <>
+              <span className="greeting">
+                {username ? `Hi, ${username}` : "Signed in"}
+              </span>
+              <Button size="sm" onClick={handleLogin} className="btn">
+                Log Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleLogin} size="sm" variant="ghost">
+                Log in
+              </Button>
+
+              <a href="#upload" className="cta">
+                Get Started
+              </a>
+            </>
+          )}
         </div>
       </div>
     </header>
