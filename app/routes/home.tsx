@@ -1,16 +1,28 @@
 import type { Route } from "./+types/home";
 import Navbar from "../../components/Navbar";
-import { ArrowRight, Layers, Clock, ArrowUp, ArrowUpRight } from "lucide-react";
+import Upload from "../../components/Upload";
+import { ArrowRight, Layers, Clock, ArrowUpRight } from "lucide-react";
 import Button from "../../components/ui/Button";
+import { useNavigate } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Aera" },
+    { name: "description", content: "Welcome to Aera!" },
   ];
 }
 
 export default function Home() {
+  const navigate = useNavigate();
+
+  const handleUploadComplete = async (base64Image: string) => {
+    const newId = Date.now().toString();
+
+    navigate(`/visualizer/${newId}`);
+
+    return true;
+  }
+
   return (
     <div className="home">
       <Navbar />
@@ -46,7 +58,7 @@ export default function Home() {
               <p>Supports JPG, PNG, formats up to 10MB</p>
             </div>
 
-            <p>Upload images</p>
+            <Upload onComplete={handleUploadComplete} />
           </div>
         </div>
       </section>
