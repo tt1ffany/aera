@@ -13,8 +13,10 @@ export const getOrCreateHostingConfig = async (): Promise<HostingConfig | null> 
     try {
         // If successfully created subdomain, create a new Puter hosting
         const created = await puter.hosting.create(subdomain, '.');
-
-        return { subdomain: created.subdomain };
+        const record = { subdomain: created.subdomain };
+        // Persist newly created subdomain to KV to ensure it can be recalled
+        await puter.kv.set(HOSTING_CONFIG_KEY, record);
+        return record;
     } catch (error) {
         console.warn(`Could not find subdomain: ${error}`);
         return null;
