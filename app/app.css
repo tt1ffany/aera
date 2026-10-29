@@ -407,6 +407,10 @@
         .panel-header {
           @apply flex items-center justify-between;
 
+          .compare-actions {
+            @apply flex items-center gap-3;
+          }
+
           .hint {
             @apply text-xs text-zinc-400;
           }
@@ -414,6 +418,7 @@
 
         .compare-stage {
           @apply relative bg-zinc-100 overflow-hidden;
+          aspect-ratio: 16 / 9;
         }
 
         .compare-fallback {
@@ -421,7 +426,7 @@
         }
 
         .compare-img {
-          @apply w-full h-auto object-contain;
+          @apply w-full h-full object-contain;
         }
       }
     }
