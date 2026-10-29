@@ -37,12 +37,31 @@ export const fetchAsDataUrl = async (url: string): Promise<string> => {
     });
 };
 
+const getImageDimensions = (source: string): Promise<{ width: number; height: number }> =>
+    new Promise((resolve, reject) => {
+        const image = new Image();
+
+        image.onload = () => resolve({
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+        });
+        image.onerror = () => reject(new Error("Failed to determine source image dimensions"));
+        image.src = source;
+    });
+
+const greatestCommonDivisor = (a: number, b: number): number =>
+    b === 0 ? a : greatestCommonDivisor(b, a % b);
+
 export const generate3DDesign = async ({ sourceImage }: Generate3DViewParams) => {
     // Normalize the input so the AI request receives image data in Data URL format
     const dataUrl = sourceImage.startsWith("data:")
         ? sourceImage
         : await fetchAsDataUrl(sourceImage);
 
+    const { width, height } = await getImageDimensions(dataUrl);
+    if (!width || !height) throw new Error("Source image has invalid dimensions");
+
+    const divisor = greatestCommonDivisor(width, height);
     // Separate the Base64-encoded image data from the Data URL's metadata
     const base64Data = dataUrl.split(",")[1];
     const mimeType = dataUrl.split(";")[0].split(":")[1]; // Gets the type of the image
@@ -55,7 +74,7 @@ export const generate3DDesign = async ({ sourceImage }: Generate3DViewParams) =>
         model: "gemini-3.1-flash-image",
         input_image: base64Data,
         input_image_mime_type: mimeType,
-        ratio: { w: 1024, h: 1024 }
+        ratio: { w: width / divisor, h: height / divisor }
     })
 
     // Extract the AI generated image URL from the response
@@ -71,4 +90,3 @@ export const generate3DDesign = async ({ sourceImage }: Generate3DViewParams) =>
 
     return { renderedImage, renderedPath: undefined };
 }
-

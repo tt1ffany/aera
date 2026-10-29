@@ -4,13 +4,12 @@ import { generate3DDesign } from "../../lib/ai.action";
 import { Box, X, Download, Share2, RefreshCcw } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { createProject, getProjectById } from "../../lib/puter.action"
+import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 
 const VisualizerId = () => {
   const { id } = useParams();
   const { userId } = useOutletContext<AuthContext>();
   const navigate = useNavigate();
-  // const location = useLocation();
-  // const { initialImage, initialRender, name } = location.state || {};
 
   const hasInitialGenerated = useRef(false);
 
@@ -19,6 +18,7 @@ const VisualizerId = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
   const handleBack = () => navigate("/");
 
@@ -42,7 +42,10 @@ const VisualizerId = () => {
           isPublic: item.isPublic ?? false,
         }
 
-        const saved = await createProject({ item: updatedItem, visibility: "private" })
+        const saved = await createProject({
+          item: updatedItem,
+          visibility: updatedItem.isPublic ? "public" : "private",
+        })
 
         if (saved) {
           setProject(saved);
@@ -175,6 +178,65 @@ const VisualizerId = () => {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="panel compare">
+            <div className="panel-header">
+              <div className="panel-meta">
+                <p>Comparison</p>
+                <h3>Before & After</h3>
+              </div>
+              <div className="compare-actions">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => project && void runGeneration(project)}
+                  disabled={!project?.sourceImage || isProcessing}
+                  className="regenerate"
+                >
+                  <RefreshCcw className="w-4 h-4 mr-2" />
+                  Regenerate
+                </Button>
+                <div className="hint">Drag to compare</div>
+              </div>
+            </div>
+
+            <div className="compare-stage" style={{ aspectRatio: comparisonAspectRatio }}>
+              {project?.sourceImage && currentImage ? (
+                <ReactCompareSlider
+                  defaultPosition={50}
+                  style={{ width: "100%", height: "100%" }}
+                  itemOne={
+                    <ReactCompareSliderImage
+                      src={project.sourceImage}
+                      alt="Before"
+                      className="compare-img"
+                      style={{ objectFit: "contain" }}
+                      onLoad={(event) => {
+                        const { naturalWidth, naturalHeight } = event.currentTarget;
+                        if (naturalWidth && naturalHeight) {
+                          setComparisonAspectRatio(`${naturalWidth} / ${naturalHeight}`);
+                        }
+                      }}
+                    />
+                  }
+                  itemTwo={
+                    <ReactCompareSliderImage
+                      src={currentImage}
+                      alt="After"
+                      className="compare-img"
+                      style={{ objectFit: "contain" }}
+                    />
+                  }
+                />
+              ) : (
+                <div className="compare-fallback">
+                  {project?.sourceImage && (
+                    <img src={project.sourceImage} alt="Before" className="compare-img" />
+                  )}
+                </div>
+              )}
+            </div>
         </div>
       </section>
     </div>
