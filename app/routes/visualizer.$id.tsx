@@ -21,6 +21,16 @@ const VisualizerId = () => {
   const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
   const handleBack = () => navigate("/");
+  const handleExport = () => {
+    if (!currentImage) return;
+
+    const link = document.createElement('a');
+    link.href = currentImage;
+    link.download = `aera-${id || "design"}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   const runGeneration = async (item: DesignItem) => {
     if (!id || !item.sourceImage) return;
@@ -134,7 +144,7 @@ const VisualizerId = () => {
             <div className="panel-actions">
               <Button
                 size="sm"
-                onClick={() => {}}
+                onClick={handleExport}
                 className="export"
                 disabled={!currentImage}
               >
