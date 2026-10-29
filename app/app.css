@@ -357,6 +357,14 @@
             @apply bg-black text-white h-9 shadow-sm hover:bg-zinc-800;
           }
         }
+
+        .privacy-confirmation-text {
+          @apply text-xs text-zinc-600;
+        }
+      }
+
+      .visibility-error {
+        @apply px-5 py-2 text-sm text-red-600;
       }
 
       .render-area {
@@ -610,6 +618,7 @@
             @apply col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-10 text-center text-sm text-zinc-500;
           }
         }
+
       }
     }
 

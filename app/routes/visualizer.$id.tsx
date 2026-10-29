@@ -1,14 +1,25 @@
-import { useNavigate, useParams, useOutletContext } from "react-router";
+import {
+  useNavigate,
+  useParams,
+  useOutletContext,
+  useSearchParams,
+} from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { generate3DDesign } from "../../lib/ai.action";
 import { Box, X, Download, Share2, RefreshCcw } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { createProject, getProjectById } from "../../lib/puter.action"
+import {
+  createProject,
+  getProjectById,
+  updateProjectVisibility,
+} from "../../lib/puter.action";
 import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
 
 const VisualizerId = () => {
   const { id } = useParams();
   const { userId } = useOutletContext<AuthContext>();
+  const [searchParams] = useSearchParams();
+  const ownerId = searchParams.get("ownerId");
   const navigate = useNavigate();
 
   const hasInitialGenerated = useRef(false);
@@ -18,6 +29,8 @@ const VisualizerId = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [confirmPublic, setConfirmPublic] = useState(false);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
   const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
   const handleBack = () => navigate("/");
@@ -33,7 +46,8 @@ const VisualizerId = () => {
   }
 
   const runGeneration = async (item: DesignItem) => {
-    if (!id || !item.sourceImage) return;
+    if (!id || !item.sourceImage || (item.ownerId && item.ownerId !== userId))
+      return;
 
     try {
       setIsProcessing(true);
@@ -49,13 +63,13 @@ const VisualizerId = () => {
           renderedPath: result.renderedPath,
           timestamp: Date.now(),
           ownerId: item.ownerId ?? userId ?? null,
-          isPublic: item.isPublic ?? false,
-        }
+          visibility: item.visibility ?? "private",
+        };
 
         const saved = await createProject({
           item: updatedItem,
-          visibility: updatedItem.isPublic ? "public" : "private",
-        })
+          visibility: item.visibility ?? "private",
+        });
 
         if (saved) {
           setProject(saved);
@@ -67,6 +81,25 @@ const VisualizerId = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const changeVisibility = async (visibility: "private" | "public") => {
+    if (!project) return;
+    setVisibilityError(null);
+
+    const updatedProject = await updateProjectVisibility({
+      id: project.id,
+      visibility,
+    });
+    if (!updatedProject) {
+      setVisibilityError(
+        "Could not update project visibility. Please try again.",
+      );
+      return;
+    }
+
+    setProject(updatedProject);
+    setConfirmPublic(false);
   };
 
   // Load and display saved project by ID
@@ -81,7 +114,7 @@ const VisualizerId = () => {
 
       setIsProjectLoading(true);
 
-      const fetchedProject = await getProjectById({ id });
+      const fetchedProject = await getProjectById({ id, ownerId });
 
       // Prevent a stale request from updating state after this effect is cleaned up
       if (!isMounted) return;
@@ -91,7 +124,7 @@ const VisualizerId = () => {
       setIsProjectLoading(false);
       // Allow the initial render decision to run for the newly loaded project
       hasInitialGenerated.current = false;
-    }
+    };
 
     loadProject();
 
@@ -99,12 +132,16 @@ const VisualizerId = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, ownerId, userId]);
 
   // Decide if image generation is required and what image to display once project is loaded
   useEffect(() => {
     // Wait for project loading to finish and avoid repeating the initial generation decision
-    if (isProjectLoading || hasInitialGenerated.current || !project?.sourceImage) {
+    if (
+      isProjectLoading ||
+      hasInitialGenerated.current ||
+      !project?.sourceImage
+    ) {
       return;
     }
 
@@ -115,10 +152,18 @@ const VisualizerId = () => {
       return;
     }
 
-    // Mark the initial decision before starting generation to prevent duplicate calls
+    if (!userId) return;
+    if (project.ownerId && project.ownerId !== userId) {
+      hasInitialGenerated.current = true;
+      return;
+    }
+
     hasInitialGenerated.current = true;
     void runGeneration(project);
-  }, [project, isProjectLoading]);
+  }, [project, isProjectLoading, userId]);
+
+  const isOwner = !!userId && project?.ownerId === userId;
+  const visibility = project?.visibility ?? "private";
 
   return (
     <div className="visualizer">
@@ -138,7 +183,9 @@ const VisualizerId = () => {
             <div className="panel-meta">
               <p>Project</p>
               <h2>{project?.name || `Residence ${id}`}</h2>
-              <p className="note">Created By You</p>
+              <p className="note">
+                {visibility === "public" ? "Public project" : "Private project"}
+              </p>
             </div>
 
             <div className="panel-actions">
@@ -150,20 +197,56 @@ const VisualizerId = () => {
               >
                 <Download className="w-4 h-4 mr-2" /> Export
               </Button>
-              <Button size="sm" onClick={() => {}} className="share">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+              {isOwner &&
+                project &&
+                (visibility === "private" ? (
+                  confirmPublic ? (
+                    <>
+                      <span className="privacy-confirmation-text">
+                        Anyone can view this project.
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() => void changeVisibility("public")}
+                      >
+                        Confirm public
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfirmPublic(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => setConfirmPublic(true)}
+                      className="share"
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Make public
+                    </Button>
+                  )
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => void changeVisibility("private")}
+                    className="share"
+                  >
+                    Make private
+                  </Button>
+                ))}
             </div>
           </div>
+          {visibilityError && (
+            <p className="visibility-error">{visibilityError}</p>
+          )}
 
           <div className={`render-area ${isProcessing ? "is-processing" : ""}`}>
             {currentImage ? (
-              <img
-                src={currentImage}
-                alt="AI Render"
-                className="render-img"
-              />
+              <img src={currentImage} alt="AI Render" className="render-img" />
             ) : (
               <div className="render-placeholder">
                 {project?.sourceImage && (

@@ -3,7 +3,7 @@ import Navbar from "../../components/Navbar";
 import Upload from "../../components/Upload";
 import { ArrowRight, Layers, Clock, ArrowUpRight } from "lucide-react";
 import Button from "../../components/ui/Button";
-import { useNavigate } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { createProject, getProjects } from "../../lib/puter.action";
 
@@ -16,6 +16,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { userId } = useOutletContext<AuthContext>();
   const [projects, setProjects] = useState<DesignItem[]>([]);
   const isCreatingProjectRef = useRef(false);
 
@@ -63,14 +64,21 @@ export default function Home() {
 
   // Update projects state to display changes (e.g., new projects)
   useEffect(() => {
+    let isCurrentRequest = true;
+    setProjects([]);
+
     const fetchProjects = async () => {
       const items = await getProjects();
 
-      setProjects(items);
+      if (isCurrentRequest) setProjects(items);
     }
 
-    fetchProjects();
-  }, []);
+    void fetchProjects();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [userId]);
 
   return (
     <div className="home">
@@ -125,14 +133,21 @@ export default function Home() {
           </div>
 
           <div className="projects-grid">
-            {projects.map(
-              ({ id, name, renderedImage, sourceImage, timestamp }) => (
-                <div key={id} className="project-card group" onClick={() => navigate(`/visualizer/${id}`)}>
+            {projects.map((project) => {
+              const { id, name, renderedImage, sourceImage, timestamp } = project;
+              const visibility = project.visibility ?? "private";
+
+              return (
+                <div
+                  key={`${project.ownerId}_${id}`}
+                  className="project-card group"
+                  onClick={() => navigate(`/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`)}
+                >
                   <div className="preview">
                     <img src={renderedImage || sourceImage} alt="Project" />
 
                     <div className="badge">
-                      <span>Community</span>
+                      <span>{visibility === "public" ? "Public" : "Private"}</span>
                     </div>
                   </div>
 
@@ -152,8 +167,8 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              ),
-            )}
+              );
+            })}
           </div>
         </div>
       </section>

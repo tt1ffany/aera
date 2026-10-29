@@ -35,7 +35,7 @@ interface DesignItem {
     ownerId?: string | null;
     sharedBy?: string | null;
     sharedAt?: string | null;
-    isPublic?: boolean;
+    visibility?: "private" | "public";
 }
 
 interface CreateProjectParams {
