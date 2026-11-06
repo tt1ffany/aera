@@ -175,3 +175,29 @@ export const getProjectById = async ({ id, ownerId }: { id: string; ownerId?: st
         return null;
     }
 }
+
+export const getUnlistedProject = async ({ shareToken }: { shareToken: string }) => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; skip unlisted project fetch");
+        return null;
+    }
+
+    try {
+        const query = new URLSearchParams({ shareToken });
+
+        const response = await fetch(`${PUTER_WORKER_URL}/api/projects/unlisted-get?${query}`);
+        if (!response.ok) {
+            console.error("Failed to fetch unlisted project:", await response.text());
+            return null;
+        }
+
+        const data = (await response.json()) as {
+            project?: DesignItem | null;
+        };
+
+        return data?.project ?? null;
+    } catch(error) {
+        console.error("Failed to fetch unlisted project: ", error);
+        return null;
+    }
+}

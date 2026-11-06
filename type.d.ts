@@ -35,12 +35,13 @@ interface DesignItem {
     ownerId?: string | null;
     sharedBy?: string | null;
     sharedAt?: string | null;
-    visibility?: "private" | "public";
+    shareToken?: string | null;
+    visibility?: "private" | "unlisted" | "public";
 }
 
 interface CreateProjectParams {
     item: DesignItem;
-    visibility?: "private" | "public";
+    visibility?: "private" | "unlisted" | "public";
 }
 
 interface Generate3DViewParams {
