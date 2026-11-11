@@ -83,6 +83,37 @@ export const createProject = async ({ item, visibility = "private" }: CreateProj
     }
 }
 
+export const updateProjectVisibility = async ({
+    id,
+    visibility,
+}: {
+    id: string;
+    visibility: "private" | "unlisted" | "public";
+}): Promise<DesignItem | null> => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; cannot update project visibility");
+        return null;
+    }
+
+    try {
+        const response = await puter.workers.exec(`${PUTER_WORKER_URL}/api/projects/visibility`, {
+            method: "POST",
+            body: JSON.stringify({ id, visibility }),
+        });
+
+        if (!response.ok) {
+            console.error("Failed to update project visibility", await response.text());
+            return null;
+        }
+
+        const data = (await response.json()) as { project?: DesignItem | null };
+        return data.project ?? null;
+    } catch (error) {
+        console.error("Failed to update project visibility", error);
+        return null;
+    }
+}
+
 export const getProjects = async () => {
     if (!PUTER_WORKER_URL) {
         console.warn("Missing VITE_PUTER_WORKER_URL; skip history fetch");
@@ -90,9 +121,10 @@ export const getProjects = async () => {
     }
 
     try {
-       // Fetch all the projects user has created
-       // Use Puter work and .exec() (execute) with endpoint
-       const response = await puter.workers.exec(`${PUTER_WORKER_URL}/api/projects/list`, { method: "GET" });
+       const currentUser = await getCurrentUser();
+       const response = currentUser
+           ? await puter.workers.exec(`${PUTER_WORKER_URL}/api/projects/list`, { method: "GET" })
+           : await fetch(`${PUTER_WORKER_URL}/api/projects/public-list`);
        if (!response.ok) {
             console.error("Failed to fetch history", await response.text());
             return [];
@@ -107,19 +139,22 @@ export const getProjects = async () => {
     }
 }
 
-export const getProjectById = async ({ id } : { id: string }) => {
+export const getProjectById = async ({ id, ownerId }: { id: string; ownerId?: string | null }) => {
     if (!PUTER_WORKER_URL) {
-        console.warn("Missing VITE_PUTER_WORKER_URL; skipping project fetch.");
+        console.warn("Missing VITE_PUTER_WORKER_URL; skipping project save.");
         return null;
     }
 
     console.log("Fetching project with ID:", id);
 
     try {
-        const response = await puter.workers.exec(
-            `${PUTER_WORKER_URL}/api/projects/get?id=${encodeURIComponent(id)}`,
-            { method: "GET" },
-        );
+        const currentUser = await getCurrentUser();
+        const query = new URLSearchParams({ id });
+        if (ownerId) query.set("ownerId", ownerId);
+        const isAuthenticated = !!currentUser;
+        const response = isAuthenticated
+            ? await puter.workers.exec(`${PUTER_WORKER_URL}/api/projects/get?${query}`, { method: "GET" })
+            : await fetch(`${PUTER_WORKER_URL}/api/projects/public-get?${query}`);
 
         console.log("Fetch project response:", response);
 
@@ -137,6 +172,32 @@ export const getProjectById = async ({ id } : { id: string }) => {
         return data?.project ?? null;
     } catch (error) {
         console.error("Failed to fetch project:", error);
+        return null;
+    }
+}
+
+export const getUnlistedProject = async ({ shareToken }: { shareToken: string }) => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; skip unlisted project fetch");
+        return null;
+    }
+
+    try {
+        const query = new URLSearchParams({ shareToken });
+
+        const response = await fetch(`${PUTER_WORKER_URL}/api/projects/unlisted-get?${query}`);
+        if (!response.ok) {
+            console.error("Failed to fetch unlisted project:", await response.text());
+            return null;
+        }
+
+        const data = (await response.json()) as {
+            project?: DesignItem | null;
+        };
+
+        return data?.project ?? null;
+    } catch(error) {
+        console.error("Failed to fetch unlisted project: ", error);
         return null;
     }
 }
