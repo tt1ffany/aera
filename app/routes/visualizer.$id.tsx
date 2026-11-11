@@ -36,6 +36,9 @@ const VisualizerId = () => {
   const [pendingVisibility, setPendingVisibility] = useState<
     "private" | "unlisted" | "public" | null
   >(null);
+  const [shareLinkStatus, setShareLinkStatus] = useState<
+    "copied" | "error" | null
+  >(null);
   const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
   const handleBack = () => navigate("/");
@@ -134,6 +137,26 @@ const VisualizerId = () => {
 
     setProject(updatedProject);
     setPendingVisibility(null);
+    setShareLinkStatus(null);
+  };
+
+  const copyShareLink = async () => {
+    setShareLinkStatus(null);
+
+    if (!project?.shareToken) {
+      setShareLinkStatus("error");
+      return;
+    }
+
+    const shareUrl = `${window.location.origin}/share/${encodeURIComponent(project.shareToken)}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareLinkStatus("copied");
+    } catch (error) {
+      console.error("Failed to copy share link", error);
+      setShareLinkStatus("error");
+    }
   };
 
   // Load and display saved project by ID
@@ -237,6 +260,19 @@ const VisualizerId = () => {
               </Button>
               {!pendingVisibility &&
                 isOwner &&
+                visibility === "unlisted" &&
+                project?.shareToken && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void copyShareLink()}
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Copy share link
+                  </Button>
+                )}
+              {!pendingVisibility &&
+                isOwner &&
                 project &&
                 visibilityOptions
                   .filter((option) => option.value !== visibility)
@@ -247,7 +283,6 @@ const VisualizerId = () => {
                       className="share"
                       onClick={() => requestVisibilityChange(option.value)}
                     >
-                      <Share2 className="w-4 h-4 mr-2" />
                       {option.label}
                     </Button>
                   ))}
@@ -275,6 +310,18 @@ const VisualizerId = () => {
           </div>
           {visibilityError && (
             <p className="visibility-error">{visibilityError}</p>
+          )}
+          {shareLinkStatus && (
+            <p
+              className={`share-link-status ${
+                shareLinkStatus === "copied" ? "is-success" : "is-error"
+              }`}
+              role={shareLinkStatus === "copied" ? "status" : "alert"}
+            >
+              {shareLinkStatus === "copied"
+                ? "Share link copied to clipboard."
+                : "Could not copy the share link. Please try again."}
+            </p>
           )}
 
           <div className={`render-area ${isProcessing ? "is-processing" : ""}`}>

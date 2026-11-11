@@ -367,6 +367,18 @@
         @apply px-5 py-2 text-sm text-red-600;
       }
 
+      .share-link-status {
+        @apply mx-5 my-3 rounded-md border px-3 py-2 text-sm;
+      }
+
+      .share-link-status.is-success {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+      }
+
+      .share-link-status.is-error {
+        @apply border-red-200 bg-red-50 text-red-700;
+      }
+
       .render-area {
         @apply relative bg-zinc-100 min-h-105;
 
@@ -618,7 +630,6 @@
             @apply col-span-full rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-10 text-center text-sm text-zinc-500;
           }
         }
-
       }
     }
 
