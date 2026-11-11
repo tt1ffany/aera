@@ -147,7 +147,7 @@ export default function Home() {
                     <img src={renderedImage || sourceImage} alt="Project" />
 
                     <div className="badge">
-                      <span>{visibility === "public" ? "Public" : "Private"}</span>
+                      <span>{visibility === "public" ? "Public" : visibility === "unlisted" ? "Unlisted" : "Private"}</span>
                     </div>
                   </div>
 

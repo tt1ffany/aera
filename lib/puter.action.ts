@@ -88,7 +88,7 @@ export const updateProjectVisibility = async ({
     visibility,
 }: {
     id: string;
-    visibility: "private" | "public";
+    visibility: "private" | "unlisted" | "public";
 }): Promise<DesignItem | null> => {
     if (!PUTER_WORKER_URL) {
         console.warn("Missing VITE_PUTER_WORKER_URL; cannot update project visibility");

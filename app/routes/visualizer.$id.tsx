@@ -13,7 +13,10 @@ import {
   getProjectById,
   updateProjectVisibility,
 } from "../../lib/puter.action";
-import { ReactCompareSlider, ReactCompareSliderImage } from "react-compare-slider";
+import {
+  ReactCompareSlider,
+  ReactCompareSliderImage,
+} from "react-compare-slider";
 
 const VisualizerId = () => {
   const { id } = useParams();
@@ -29,21 +32,32 @@ const VisualizerId = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-  const [confirmPublic, setConfirmPublic] = useState(false);
   const [visibilityError, setVisibilityError] = useState<string | null>(null);
+  const [pendingVisibility, setPendingVisibility] = useState<
+    "private" | "unlisted" | "public" | null
+  >(null);
   const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
   const handleBack = () => navigate("/");
   const handleExport = () => {
     if (!currentImage) return;
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = currentImage;
     link.download = `aera-${id || "design"}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }
+  };
+
+  const visibilityOptions: {
+    value: "private" | "unlisted" | "public";
+    label: string;
+  }[] = [
+    { value: "private", label: "Make private" },
+    { value: "unlisted", label: "Make unlisted" },
+    { value: "public", label: "Make public" },
+  ];
 
   const runGeneration = async (item: DesignItem) => {
     if (!id || !item.sourceImage || (item.ownerId && item.ownerId !== userId))
@@ -83,7 +97,27 @@ const VisualizerId = () => {
     }
   };
 
-  const changeVisibility = async (visibility: "private" | "public") => {
+  const requestVisibilityChange = (
+    nextVisibility: "private" | "unlisted" | "public",
+  ) => {
+    if (!project) return;
+
+    const isMakingPrivateProjectShareable =
+      (project.visibility === "private" &&
+        (nextVisibility === "unlisted" || nextVisibility === "public")) ||
+      (project.visibility === "unlisted" && nextVisibility === "public");
+
+    if (isMakingPrivateProjectShareable) {
+      setPendingVisibility(nextVisibility);
+      return;
+    }
+
+    void changeVisibility(nextVisibility);
+  };
+
+  const changeVisibility = async (
+    visibility: "private" | "unlisted" | "public",
+  ) => {
     if (!project) return;
     setVisibilityError(null);
 
@@ -99,7 +133,7 @@ const VisualizerId = () => {
     }
 
     setProject(updatedProject);
-    setConfirmPublic(false);
+    setPendingVisibility(null);
   };
 
   // Load and display saved project by ID
@@ -184,7 +218,11 @@ const VisualizerId = () => {
               <p>Project</p>
               <h2>{project?.name || `Residence ${id}`}</h2>
               <p className="note">
-                {visibility === "public" ? "Public project" : "Private project"}
+                {visibility === "public"
+                  ? "Public project"
+                  : visibility === "unlisted"
+                    ? "Unlisted project"
+                    : "Private project"}
               </p>
             </div>
 
@@ -197,47 +235,42 @@ const VisualizerId = () => {
               >
                 <Download className="w-4 h-4 mr-2" /> Export
               </Button>
-              {isOwner &&
+              {!pendingVisibility &&
+                isOwner &&
                 project &&
-                (visibility === "private" ? (
-                  confirmPublic ? (
-                    <>
-                      <span className="privacy-confirmation-text">
-                        Anyone can view this project.
-                      </span>
-                      <Button
-                        size="sm"
-                        onClick={() => void changeVisibility("public")}
-                      >
-                        Confirm public
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setConfirmPublic(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
+                visibilityOptions
+                  .filter((option) => option.value !== visibility)
+                  .map((option) => (
                     <Button
+                      key={option.value}
                       size="sm"
-                      onClick={() => setConfirmPublic(true)}
                       className="share"
+                      onClick={() => requestVisibilityChange(option.value)}
                     >
                       <Share2 className="w-4 h-4 mr-2" />
-                      Make public
+                      {option.label}
                     </Button>
-                  )
-                ) : (
+                  ))}
+              {pendingVisibility && (
+                <>
+                  <span>
+                    Confirm changing visibility to {pendingVisibility}?
+                  </span>
                   <Button
                     size="sm"
-                    onClick={() => void changeVisibility("private")}
-                    className="share"
+                    onClick={() => void changeVisibility(pendingVisibility)}
                   >
-                    Make private
+                    Confirm
                   </Button>
-                ))}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPendingVisibility(null)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           {visibilityError && (
@@ -274,62 +307,72 @@ const VisualizerId = () => {
         </div>
 
         <div className="panel compare">
-            <div className="panel-header">
-              <div className="panel-meta">
-                <p>Comparison</p>
-                <h3>Before & After</h3>
-              </div>
-              <div className="compare-actions">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => project && void runGeneration(project)}
-                  disabled={!project?.sourceImage || isProcessing}
-                  className="regenerate"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Regenerate
-                </Button>
-                <div className="hint">Drag to compare</div>
-              </div>
+          <div className="panel-header">
+            <div className="panel-meta">
+              <p>Comparison</p>
+              <h3>Before & After</h3>
             </div>
+            <div className="compare-actions">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => project && void runGeneration(project)}
+                disabled={!project?.sourceImage || isProcessing}
+                className="regenerate"
+              >
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Regenerate
+              </Button>
+              <div className="hint">Drag to compare</div>
+            </div>
+          </div>
 
-            <div className="compare-stage" style={{ aspectRatio: comparisonAspectRatio }}>
-              {project?.sourceImage && currentImage ? (
-                <ReactCompareSlider
-                  defaultPosition={50}
-                  style={{ width: "100%", height: "100%" }}
-                  itemOne={
-                    <ReactCompareSliderImage
-                      src={project.sourceImage}
-                      alt="Before"
-                      className="compare-img"
-                      style={{ objectFit: "contain" }}
-                      onLoad={(event) => {
-                        const { naturalWidth, naturalHeight } = event.currentTarget;
-                        if (naturalWidth && naturalHeight) {
-                          setComparisonAspectRatio(`${naturalWidth} / ${naturalHeight}`);
-                        }
-                      }}
-                    />
-                  }
-                  itemTwo={
-                    <ReactCompareSliderImage
-                      src={currentImage}
-                      alt="After"
-                      className="compare-img"
-                      style={{ objectFit: "contain" }}
-                    />
-                  }
-                />
-              ) : (
-                <div className="compare-fallback">
-                  {project?.sourceImage && (
-                    <img src={project.sourceImage} alt="Before" className="compare-img" />
-                  )}
-                </div>
-              )}
-            </div>
+          <div
+            className="compare-stage"
+            style={{ aspectRatio: comparisonAspectRatio }}
+          >
+            {project?.sourceImage && currentImage ? (
+              <ReactCompareSlider
+                defaultPosition={50}
+                style={{ width: "100%", height: "100%" }}
+                itemOne={
+                  <ReactCompareSliderImage
+                    src={project.sourceImage}
+                    alt="Before"
+                    className="compare-img"
+                    style={{ objectFit: "contain" }}
+                    onLoad={(event) => {
+                      const { naturalWidth, naturalHeight } =
+                        event.currentTarget;
+                      if (naturalWidth && naturalHeight) {
+                        setComparisonAspectRatio(
+                          `${naturalWidth} / ${naturalHeight}`,
+                        );
+                      }
+                    }}
+                  />
+                }
+                itemTwo={
+                  <ReactCompareSliderImage
+                    src={currentImage}
+                    alt="After"
+                    className="compare-img"
+                    style={{ objectFit: "contain" }}
+                  />
+                }
+              />
+            ) : (
+              <div className="compare-fallback">
+                {project?.sourceImage && (
+                  <img
+                    src={project.sourceImage}
+                    alt="Before"
+                    className="compare-img"
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </div>
