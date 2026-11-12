@@ -176,6 +176,30 @@ export const getProjectById = async ({ id, ownerId }: { id: string; ownerId?: st
     }
 }
 
+export const getOwnerPublicProjects = async ({ ownerId }: { ownerId: string }) => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; skip owner's public projects fetch");
+        return [];
+    }
+
+    try {
+        const query = new URLSearchParams({ ownerId });
+
+        const response = await fetch(`${PUTER_WORKER_URL}/api/projects/public-list?${query}`);
+        if (!response.ok) {
+            console.error("Failed to fetch owner's public projects: ", await response.text());
+            return [];
+        }
+
+        const data = (await response.json()) as { projects?: DesignItem[] | null };
+
+        return Array.isArray(data?.projects) ? data?.projects : [];
+    } catch (error) {
+        console.error("Failed to fetch owner's public projects: ", error);
+        return [];
+    }
+}
+
 export const getUnlistedProject = async ({ shareToken }: { shareToken: string }) => {
     if (!PUTER_WORKER_URL) {
         console.warn("Missing VITE_PUTER_WORKER_URL; skip unlisted project fetch");
@@ -187,7 +211,7 @@ export const getUnlistedProject = async ({ shareToken }: { shareToken: string })
 
         const response = await fetch(`${PUTER_WORKER_URL}/api/projects/unlisted-get?${query}`);
         if (!response.ok) {
-            console.error("Failed to fetch unlisted project:", await response.text());
+            console.error("Failed to fetch unlisted project: ", await response.text());
             return null;
         }
 
