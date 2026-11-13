@@ -360,16 +360,18 @@ const VisualizerId = () => {
               <h3>Before & After</h3>
             </div>
             <div className="compare-actions">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => project && void runGeneration(project)}
-                disabled={!project?.sourceImage || isProcessing}
-                className="regenerate"
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Regenerate
-              </Button>
+              {isOwner && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => project && void runGeneration(project)}
+                  disabled={!project?.sourceImage || isProcessing}
+                  className="regenerate"
+                >
+                  <RefreshCcw className="w-4 h-4 mr-2" />
+                  Regenerate
+                </Button>
+              )}
               <div className="hint">Drag to compare</div>
             </div>
           </div>
