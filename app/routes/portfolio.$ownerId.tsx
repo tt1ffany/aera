@@ -84,7 +84,9 @@ const Portfolio = () => {
                     className="project-card group"
                     onClick={() =>
                       navigate(
-                        `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`,
+                        `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`, {
+                          state: { returnTo: `/portfolio/${ownerId || ""}`},
+                        }
                       )
                     }
                   >
@@ -105,7 +107,7 @@ const Portfolio = () => {
                           <span>
                             {new Date(timestamp).toLocaleDateString()}
                           </span>
-                          <span>By Tiffany</span>
+                          <span>By {project.ownerName || "Aera user"}</span>
                         </div>
                       </div>
 

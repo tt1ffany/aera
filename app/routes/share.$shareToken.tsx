@@ -102,7 +102,9 @@ const ShareToken = () => {
                 <h2>
                   {unlistedProject?.name || `Residence ${unlistedProject?.id}`}
                 </h2>
-                <p className="note">Unlisted Project</p>
+                <p className="note">
+                  Unlisted Project | By {unlistedProject.ownerName || "Aera user"}
+                </p>
               </div>
             </div>
 
