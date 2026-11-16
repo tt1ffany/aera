@@ -225,3 +225,25 @@ export const getUnlistedProject = async ({ shareToken }: { shareToken: string })
         return null;
     }
 }
+
+export const getExampleProjects = async () => {
+    if (!PUTER_WORKER_URL) {
+        console.warn("Missing VITE_PUTER_WORKER_URL; skip example projects fetch");
+        return [];
+    }
+
+    try {
+        const response = await fetch(`${PUTER_WORKER_URL}/api/projects/examples`);
+        if (!response.ok) {
+            console.error("Failed to fetch example projects: ", await response.text());
+            return [];
+        }
+
+        const data = (await response.json()) as { projects?: DesignItem[] | null };
+
+        return Array.isArray(data?.projects) ? data?.projects : [];
+    } catch (error) {
+        console.error("Failed to fetch example projects: ", error);
+        return [];
+    }
+}

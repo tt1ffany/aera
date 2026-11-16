@@ -5,7 +5,11 @@ import { ArrowRight, Layers, Clock, ArrowUpRight } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useNavigate, useOutletContext } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { createProject, getProjects } from "../../lib/puter.action";
+import {
+  createProject,
+  getProjects,
+  getExampleProjects,
+} from "../../lib/puter.action";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -15,9 +19,13 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  type VisibilityFilter = "all" | "public" | "unlisted" | "private";
+
   const navigate = useNavigate();
   const { userId } = useOutletContext<AuthContext>();
+  const [exampleProjects, setExampleProjects] = useState<DesignItem[]>([]);
   const [projects, setProjects] = useState<DesignItem[]>([]);
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
   const isCreatingProjectRef = useRef(false);
 
   const handleUploadComplete = async (base64Image: string) => {
@@ -65,13 +73,24 @@ export default function Home() {
   // Update projects state to display changes (e.g., new projects)
   useEffect(() => {
     let isCurrentRequest = true;
+    setExampleProjects([]);
     setProjects([]);
 
     const fetchProjects = async () => {
-      const items = await getProjects();
+      const userProjectsPromise: Promise<DesignItem[]> = userId
+        ? getProjects()
+        : Promise.resolve([]);
 
-      if (isCurrentRequest) setProjects(items);
-    }
+      const [examples, userProjects] = await Promise.all([
+        getExampleProjects(),
+        userProjectsPromise,
+      ]);
+
+      if (!isCurrentRequest) return;
+
+      setExampleProjects(examples);
+      setProjects(userProjects);
+    };
 
     void fetchProjects();
 
@@ -122,54 +141,134 @@ export default function Home() {
 
       <section className="projects">
         <div className="section-inner">
-          <div className="section-head">
-            <div className="copy">
-              <h2>Projects</h2>
-              <p>
-                Your latest works and shared community projects, all in one
-                place.
-              </p>
-            </div>
-          </div>
+          {/* Example Projects */}
+          {exampleProjects.length > 0 && (
+            <>
+              <div className="section-head">
+                <div className="copy">
+                  <h2>Examples</h2>
+                  <p>Checkout samples of Aera projects.</p>
+                </div>
+              </div>
 
-          <div className="projects-grid">
-            {projects.map((project) => {
-              const { id, name, renderedImage, sourceImage, timestamp } = project;
-              const visibility = project.visibility ?? "private";
+              <div className="projects-grid">
+                {exampleProjects.map((project) => {
+                  const { id, name, renderedImage, sourceImage, timestamp } =
+                    project;
 
-              return (
-                <div
-                  key={`${project.ownerId}_${id}`}
-                  className="project-card group"
-                  onClick={() => navigate(`/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`)}
-                >
-                  <div className="preview">
-                    <img src={renderedImage || sourceImage} alt="Project" />
+                  return (
+                    <div
+                      key={`${project.ownerId}_${id}`}
+                      className="project-card group"
+                      onClick={() =>
+                        navigate(
+                          `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`,
+                        )
+                      }
+                    >
+                      <div className="preview">
+                        <img src={renderedImage || sourceImage} alt="Project" />
 
-                    <div className="badge">
-                      <span>{visibility === "public" ? "Public" : visibility === "unlisted" ? "Unlisted" : "Private"}</span>
-                    </div>
-                  </div>
+                        <div className="badge">
+                          <span>{"Example"}</span>
+                        </div>
+                      </div>
 
-                  <div className="card-body">
-                    <div>
-                      <h3>{name}</h3>
+                      <div className="card-body">
+                        <div>
+                          <h3>{name}</h3>
 
-                      <div className="meta">
-                        <Clock size={12} />
-                        <span>{new Date(timestamp).toLocaleDateString()}</span>
-                        <span>By {project.ownerName || "Aera user"}</span>
+                          <div className="meta">
+                            <Clock size={12} />
+                            <span>
+                              {new Date(timestamp).toLocaleDateString()}
+                            </span>
+                            <span>By {project.ownerName || "Aera user"}</span>
+                          </div>
+                        </div>
+
+                        <div className="arrow">
+                          <ArrowUpRight size={18} />
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-                    <div className="arrow">
-                      <ArrowUpRight size={18} />
-                    </div>
-                  </div>
+          {/* Owner Projects */}
+          {userId && (
+            <div className="owner-projects">
+              <div className="section-head">
+                <div className="copy">
+                  <h2>Your Projects</h2>
+                  <p>Your latest works.</p>
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="">
+
+                </div>
+              </div>
+
+              <div className="projects-grid">
+                {userId &&
+                  projects.map((project) => {
+                    const { id, name, renderedImage, sourceImage, timestamp } =
+                      project;
+                    const visibility = project.visibility ?? "private";
+
+                    return (
+                      <div
+                        key={`${project.ownerId}_${id}`}
+                        className="project-card group"
+                        onClick={() =>
+                          navigate(
+                            `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`,
+                          )
+                        }
+                      >
+                        <div className="preview">
+                          <img
+                            src={renderedImage || sourceImage}
+                            alt="Project"
+                          />
+
+                          <div className="badge">
+                            <span>
+                              {visibility === "public"
+                                ? "Public"
+                                : visibility === "unlisted"
+                                  ? "Unlisted"
+                                  : "Private"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="card-body">
+                          <div>
+                            <h3>{name}</h3>
+
+                            <div className="meta">
+                              <Clock size={12} />
+                              <span>
+                                {new Date(timestamp).toLocaleDateString()}
+                              </span>
+                              <span>By {project.ownerName || "Aera user"}</span>
+                            </div>
+                          </div>
+
+                          <div className="arrow">
+                            <ArrowUpRight size={18} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
