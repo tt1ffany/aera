@@ -18,14 +18,23 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
-  type VisibilityFilter = "all" | "public" | "unlisted" | "private";
+type VisibilityFilter = "all" | "public" | "unlisted" | "private";
 
+const visibilityFilters: { value: VisibilityFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "public", label: "Public" },
+  { value: "unlisted", label: "Unlisted" },
+  { value: "private", label: "Private" },
+];
+
+export default function Home() {
   const navigate = useNavigate();
   const { userId } = useOutletContext<AuthContext>();
   const [exampleProjects, setExampleProjects] = useState<DesignItem[]>([]);
+  const [isExamplesLoading, setIsExamplesLoading] = useState(true);
   const [projects, setProjects] = useState<DesignItem[]>([]);
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
+  const [visibilityFilter, setVisibilityFilter] =
+    useState<VisibilityFilter>("all");
   const isCreatingProjectRef = useRef(false);
 
   const handleUploadComplete = async (base64Image: string) => {
@@ -74,6 +83,7 @@ export default function Home() {
   useEffect(() => {
     let isCurrentRequest = true;
     setExampleProjects([]);
+    setIsExamplesLoading(true);
     setProjects([]);
 
     const fetchProjects = async () => {
@@ -90,6 +100,7 @@ export default function Home() {
 
       setExampleProjects(examples);
       setProjects(userProjects);
+      setIsExamplesLoading(false);
     };
 
     void fetchProjects();
@@ -98,6 +109,18 @@ export default function Home() {
       isCurrentRequest = false;
     };
   }, [userId]);
+
+  const exampleKeys = new Set(
+    exampleProjects.map((project) => `${project.ownerId}_${project.id}`),
+  );
+  const ownedProjects = projects.filter(
+    (project) => !exampleKeys.has(`${project.ownerId}_${project.id}`),
+  );
+  const visibleProjects = ownedProjects.filter(
+    (project) =>
+      visibilityFilter === "all" ||
+      (project.visibility ?? "private") === visibilityFilter,
+  );
 
   return (
     <div className="home">
@@ -142,15 +165,21 @@ export default function Home() {
       <section className="projects">
         <div className="section-inner">
           {/* Example Projects */}
-          {exampleProjects.length > 0 && (
-            <>
-              <div className="section-head">
-                <div className="copy">
-                  <h2>Examples</h2>
-                  <p>Checkout samples of Aera projects.</p>
+          <>
+            <div className="section-head">
+              <div className="copy">
+                <h2>Examples</h2>
+                <p>Check out samples of Aera projects.</p>
+              </div>
+            </div>
+
+            {isExamplesLoading ? (
+              <div className="projects-grid">
+                <div className="empty" role="status">
+                  Loading example projects...
                 </div>
               </div>
-
+            ) : exampleProjects.length > 0 ? (
               <div className="projects-grid">
                 {exampleProjects.map((project) => {
                   const { id, name, renderedImage, sourceImage, timestamp } =
@@ -170,7 +199,7 @@ export default function Home() {
                         <img src={renderedImage || sourceImage} alt="Project" />
 
                         <div className="badge">
-                          <span>{"Example"}</span>
+                          <span>Example</span>
                         </div>
                       </div>
 
@@ -195,8 +224,14 @@ export default function Home() {
                   );
                 })}
               </div>
-            </>
-          )}
+            ) : (
+              <div className="projects-grid">
+                <div className="empty" role="status">
+                  No example projects are available right now.
+                </div>
+              </div>
+            )}
+          </>
 
           {/* Owner Projects */}
           {userId && (
@@ -207,14 +242,32 @@ export default function Home() {
                   <p>Your latest works.</p>
                 </div>
 
-                <div className="">
-
+                <div
+                  className="project-filters flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Filter your projects"
+                >
+                  {visibilityFilters.map((filter) => (
+                    <Button
+                      key={filter.value}
+                      size="sm"
+                      variant={
+                        visibilityFilter === filter.value
+                          ? "primary"
+                          : "outline"
+                      }
+                      aria-pressed={visibilityFilter === filter.value}
+                      onClick={() => setVisibilityFilter(filter.value)}
+                    >
+                      {filter.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
 
               <div className="projects-grid">
-                {userId &&
-                  projects.map((project) => {
+                {visibleProjects.length > 0 ? (
+                  visibleProjects.map((project) => {
                     const { id, name, renderedImage, sourceImage, timestamp } =
                       project;
                     const visibility = project.visibility ?? "private";
@@ -265,7 +318,14 @@ export default function Home() {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                ) : (
+                  <div className="empty" role="status">
+                    {ownedProjects.length === 0
+                      ? "You don't have any projects yet."
+                      : `No ${visibilityFilter} projects found.`}
+                  </div>
+                )}
               </div>
             </div>
           )}
