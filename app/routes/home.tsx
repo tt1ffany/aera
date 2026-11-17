@@ -5,7 +5,11 @@ import { ArrowRight, Layers, Clock, ArrowUpRight } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { useNavigate, useOutletContext } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { createProject, getProjects } from "../../lib/puter.action";
+import {
+  createProject,
+  getProjects,
+  getExampleProjects,
+} from "../../lib/puter.action";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,10 +18,23 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+type VisibilityFilter = "all" | "public" | "unlisted" | "private";
+
+const visibilityFilters: { value: VisibilityFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "public", label: "Public" },
+  { value: "unlisted", label: "Unlisted" },
+  { value: "private", label: "Private" },
+];
+
 export default function Home() {
   const navigate = useNavigate();
   const { userId } = useOutletContext<AuthContext>();
+  const [exampleProjects, setExampleProjects] = useState<DesignItem[]>([]);
+  const [isExamplesLoading, setIsExamplesLoading] = useState(true);
   const [projects, setProjects] = useState<DesignItem[]>([]);
+  const [visibilityFilter, setVisibilityFilter] =
+    useState<VisibilityFilter>("all");
   const isCreatingProjectRef = useRef(false);
 
   const handleUploadComplete = async (base64Image: string) => {
@@ -65,13 +82,26 @@ export default function Home() {
   // Update projects state to display changes (e.g., new projects)
   useEffect(() => {
     let isCurrentRequest = true;
+    setExampleProjects([]);
+    setIsExamplesLoading(true);
     setProjects([]);
 
     const fetchProjects = async () => {
-      const items = await getProjects();
+      const userProjectsPromise: Promise<DesignItem[]> = userId
+        ? getProjects()
+        : Promise.resolve([]);
 
-      if (isCurrentRequest) setProjects(items);
-    }
+      const [examples, userProjects] = await Promise.all([
+        getExampleProjects(),
+        userProjectsPromise,
+      ]);
+
+      if (!isCurrentRequest) return;
+
+      setExampleProjects(examples);
+      setProjects(userProjects);
+      setIsExamplesLoading(false);
+    };
 
     void fetchProjects();
 
@@ -79,6 +109,18 @@ export default function Home() {
       isCurrentRequest = false;
     };
   }, [userId]);
+
+  const exampleKeys = new Set(
+    exampleProjects.map((project) => `${project.ownerId}_${project.id}`),
+  );
+  const ownedProjects = projects.filter(
+    (project) => !exampleKeys.has(`${project.ownerId}_${project.id}`),
+  );
+  const visibleProjects = ownedProjects.filter(
+    (project) =>
+      visibilityFilter === "all" ||
+      (project.visibility ?? "private") === visibilityFilter,
+  );
 
   return (
     <div className="home">
@@ -122,54 +164,171 @@ export default function Home() {
 
       <section className="projects">
         <div className="section-inner">
-          <div className="section-head">
-            <div className="copy">
-              <h2>Projects</h2>
-              <p>
-                Your latest works and shared community projects, all in one
-                place.
-              </p>
+          {/* Example Projects */}
+          <>
+            <div className="section-head">
+              <div className="copy">
+                <h2>Examples</h2>
+                <p>Check out samples of Aera projects.</p>
+              </div>
             </div>
-          </div>
 
-          <div className="projects-grid">
-            {projects.map((project) => {
-              const { id, name, renderedImage, sourceImage, timestamp } = project;
-              const visibility = project.visibility ?? "private";
+            {isExamplesLoading ? (
+              <div className="projects-grid">
+                <div className="empty" role="status">
+                  Loading example projects...
+                </div>
+              </div>
+            ) : exampleProjects.length > 0 ? (
+              <div className="projects-grid">
+                {exampleProjects.map((project) => {
+                  const { id, name, renderedImage, sourceImage, timestamp } =
+                    project;
 
-              return (
-                <div
-                  key={`${project.ownerId}_${id}`}
-                  className="project-card group"
-                  onClick={() => navigate(`/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`)}
-                >
-                  <div className="preview">
-                    <img src={renderedImage || sourceImage} alt="Project" />
+                  return (
+                    <div
+                      key={`${project.ownerId}_${id}`}
+                      className="project-card group"
+                      onClick={() =>
+                        navigate(
+                          `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`,
+                        )
+                      }
+                    >
+                      <div className="preview">
+                        <img src={renderedImage || sourceImage} alt="Project" />
 
-                    <div className="badge">
-                      <span>{visibility === "public" ? "Public" : visibility === "unlisted" ? "Unlisted" : "Private"}</span>
-                    </div>
-                  </div>
+                        <div className="badge">
+                          <span>Example</span>
+                        </div>
+                      </div>
 
-                  <div className="card-body">
-                    <div>
-                      <h3>{name}</h3>
+                      <div className="card-body">
+                        <div>
+                          <h3>{name}</h3>
 
-                      <div className="meta">
-                        <Clock size={12} />
-                        <span>{new Date(timestamp).toLocaleDateString()}</span>
-                        <span>By Tiffany</span>
+                          <div className="meta">
+                            <Clock size={12} />
+                            <span>
+                              {new Date(timestamp).toLocaleDateString()}
+                            </span>
+                            <span>By {project.ownerName || "Aera user"}</span>
+                          </div>
+                        </div>
+
+                        <div className="arrow">
+                          <ArrowUpRight size={18} />
+                        </div>
                       </div>
                     </div>
-
-                    <div className="arrow">
-                      <ArrowUpRight size={18} />
-                    </div>
-                  </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="projects-grid">
+                <div className="empty" role="status">
+                  No example projects are available right now.
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            )}
+          </>
+
+          {/* Owner Projects */}
+          {userId && (
+            <div className="owner-projects">
+              <div className="section-head">
+                <div className="copy">
+                  <h2>Your Projects</h2>
+                  <p>Your latest works.</p>
+                </div>
+
+                <div
+                  className="project-filters flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Filter your projects"
+                >
+                  {visibilityFilters.map((filter) => (
+                    <Button
+                      key={filter.value}
+                      size="sm"
+                      variant={
+                        visibilityFilter === filter.value
+                          ? "primary"
+                          : "outline"
+                      }
+                      aria-pressed={visibilityFilter === filter.value}
+                      onClick={() => setVisibilityFilter(filter.value)}
+                    >
+                      {filter.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="projects-grid">
+                {visibleProjects.length > 0 ? (
+                  visibleProjects.map((project) => {
+                    const { id, name, renderedImage, sourceImage, timestamp } =
+                      project;
+                    const visibility = project.visibility ?? "private";
+
+                    return (
+                      <div
+                        key={`${project.ownerId}_${id}`}
+                        className="project-card group"
+                        onClick={() =>
+                          navigate(
+                            `/visualizer/${id}?ownerId=${encodeURIComponent(project.ownerId || "")}`,
+                          )
+                        }
+                      >
+                        <div className="preview">
+                          <img
+                            src={renderedImage || sourceImage}
+                            alt="Project"
+                          />
+
+                          <div className="badge">
+                            <span>
+                              {visibility === "public"
+                                ? "Public"
+                                : visibility === "unlisted"
+                                  ? "Unlisted"
+                                  : "Private"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="card-body">
+                          <div>
+                            <h3>{name}</h3>
+
+                            <div className="meta">
+                              <Clock size={12} />
+                              <span>
+                                {new Date(timestamp).toLocaleDateString()}
+                              </span>
+                              <span>By {project.ownerName || "Aera user"}</span>
+                            </div>
+                          </div>
+
+                          <div className="arrow">
+                            <ArrowUpRight size={18} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="empty" role="status">
+                    {ownedProjects.length === 0
+                      ? "You don't have any projects yet."
+                      : `No ${visibilityFilter} projects found.`}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

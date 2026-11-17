@@ -3,6 +3,8 @@ import {
   useParams,
   useOutletContext,
   useSearchParams,
+  Link,
+  useLocation,
 } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { generate3DDesign } from "../../lib/ai.action";
@@ -24,6 +26,7 @@ const VisualizerId = () => {
   const [searchParams] = useSearchParams();
   const ownerId = searchParams.get("ownerId");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const hasInitialGenerated = useRef(false);
 
@@ -41,7 +44,17 @@ const VisualizerId = () => {
   >(null);
   const [comparisonAspectRatio, setComparisonAspectRatio] = useState("1 / 1");
 
-  const handleBack = () => navigate("/");
+  // Handle returning to portfolio page if project opened from portfolio (instead of home page)
+  const returnTo = location.state?.returnTo; // returnTo property from portfolio
+  const backToPortfolio = 
+    typeof returnTo === "string" && returnTo.startsWith("/portfolio/")
+    ? returnTo
+    : null;
+
+  const handleBack = () => {
+    navigate(backToPortfolio ?? "/");
+  };
+  
   const handleExport = () => {
     if (!currentImage) return;
 
@@ -230,7 +243,7 @@ const VisualizerId = () => {
           <span className="name">Aera</span>
         </div>
         <Button variant="ghost" size="sm" onClick={handleBack} className="exit">
-          <X className="icon" /> Exit Editor
+          <X className="icon" /> {backToPortfolio ? "Back to Portfolio" : "Exit Editor"}
         </Button>
       </nav>
 
@@ -242,10 +255,20 @@ const VisualizerId = () => {
               <h2>{project?.name || `Residence ${id}`}</h2>
               <p className="note">
                 {visibility === "public"
-                  ? "Public project"
+                  ? "Public project "
                   : visibility === "unlisted"
-                    ? "Unlisted project"
-                    : "Private project"}
+                    ? "Unlisted project "
+                    : "Private project "}
+                | By{" "}
+                {project?.visibility === "public" && project.ownerId ? (
+                  <Link
+                    to={`/portfolio/${encodeURIComponent(project.ownerId)}`}
+                  >
+                    {project.ownerName || "Aera user"}
+                  </Link>
+                ) : (
+                  project?.ownerName || "Aera user"
+                )}
               </p>
             </div>
 
@@ -360,16 +383,18 @@ const VisualizerId = () => {
               <h3>Before & After</h3>
             </div>
             <div className="compare-actions">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => project && void runGeneration(project)}
-                disabled={!project?.sourceImage || isProcessing}
-                className="regenerate"
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Regenerate
-              </Button>
+              {isOwner && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => project && void runGeneration(project)}
+                  disabled={!project?.sourceImage || isProcessing}
+                  className="regenerate"
+                >
+                  <RefreshCcw className="w-4 h-4 mr-2" />
+                  Regenerate
+                </Button>
+              )}
               <div className="hint">Drag to compare</div>
             </div>
           </div>
