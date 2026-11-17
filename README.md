@@ -1,87 +1,112 @@
-# Welcome to React Router!
+# Aera
 
-A modern, production-ready template for building full-stack React applications using React Router.
+An AI-powered architectural visualization application that transforms 2D floor plans into photorealistic 3D renders.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Overview
+
+Aera is a web application that uses AI to transform 2D architectural floor plans into 3D visualizations, allowing users to explore and manage their architectural design concepts.
+
+Built with React, TypeScript, and Puter.js, Aera integrates AI-powered image generation with authentication, cloud storage, and serverless infrastructure.
+
+The application also features a project visibility system and individual public portfolios, giving users control over how their projects are accessed and shared.
+
+## Development Status
+
+Aera is currently under active development. Core functionality
+is implemented, with further UI improvements and AI generation
+enhancements planned.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+### AI-Powered Visualization
+- Upload 2D floor plans and generate AI-powered 3D architectural renders.
+- Uses **Gemini 3.1 Flash Image** through Puter.js for image generation.
+- Compare original floor plans with generated renders using an interactive before-and-after slider.
+- Refined generation prompts to improve consistency and alignment between uploaded floor plans and generated renders.
+
+### Project Management & Visibility
+- Create and manage individual visualization projects.
+- Choose between three project visibility levels:
+  - **Public:** Projects are discoverable through the user's public portfolio or project link and accessible to anyone, with or without an account.
+  - **Unlisted:** Projects are accessible only through a unique shareable link.
+  - **Private:** Projects are accessible only to their owner.
+- Confirmation prompts when changing a project to a more discoverable visibility level.
+- Automatic revocation of previously generated sharing links when changing a project to a less discoverable visibility level.
+
+### Public User Portfolios
+- Individual portfolio pages displaying each user's public projects.
+- Shareable portfolio links accessible with or without an account.
+- Discover portfolios through publicly shared projects and their associated creators.
+- Context-aware navigation when moving between portfolio pages and individual project visualizations.
+
+### Project Gallery
+- **Example Projects:** A curated collection of administrator-selected projects available to all visitors.
+- **Your Projects:** A personal gallery displaying all projects belonging to the signed-in user, regardless of visibility level.
+
+## Tech Stack
+
+| Category | Technologies |
+|---|---|
+| Frontend | React, TypeScript, React Router |
+| Styling | Tailwind CSS |
+| Build Tool | Vite |
+| AI Image Generation | Gemini 3.1 Flash Image via Puter.js |
+| Backend Infrastructure | Puter.js, Puter Serverless Workers |
+| Authentication | Puter Authentication |
+| Storage | Puter KV Storage, Puter File System |
 
 ## Getting Started
 
+### Prerequisites
+- Node.js
+- npm
+
 ### Installation
 
-Install the dependencies:
+1. Clone the repository:
 
-```bash
-npm install
-```
+   ```bash
+   git clone https://github.com/tt1ffany/aera.git
+   ```
+
+2. Navigate into the project directory:
+
+   ```bash
+   cd aera
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
 
 ### Development
 
-Start the development server with HMR:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Open the local URL displayed in your terminal to access the application.
 
-## Building for Production
+## Resource Considerations
 
-Create a production build:
+Aera uses Puter's user-pays model, where AI operations and other platform resources are associated with each user's own Puter account.
 
-```bash
-npm run build
-```
+Available free resources are subject to Puter's usage limits and policies. Users may need to purchase additional resources depending on their usage.
 
-## Deployment
+## Planned Improvements
 
-### Docker Deployment
+- Redesign the application UI with custom styling.
+- Additional AI generation controls for design preferences, including materials, lighting, and furniture styles.
+- Iterative render refinement through additional prompts, with generation history.
+- Expanded lighting controls for generated visualizations.
+- User profile page with Puter resource usage information.
 
-To build and run using Docker:
+## Acknowledgements
 
-```bash
-docker build -t my-app .
+This project was initially developed following [JavaScript Mastery's Build and Deploy a Full-Stack AI App](https://www.youtube.com/watch?v=JiwTGGGIhDs).
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+The original tutorial provided the foundation for the application's core functionality. Additional features, modifications, and improvements were independently designed and implemented to extend the original application.
